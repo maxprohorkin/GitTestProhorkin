@@ -1,0 +1,64 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+
+class Program
+{
+    static List<Reader> readers = new List<Reader>();
+
+    static void Main()
+    {
+        // Создаем список читателей
+        for (int i = 1; i < 6; i++)
+        {
+            Reader reader = new Reader(i);
+            readers.Add(reader); // добавляем экземпляр в коллекцию
+        }
+        
+        foreach(var r in readers)
+        {
+            r.myThread.Join(); // дожидаемся завершения каждого потока
+        }
+    }
+}
+
+class Reader
+{
+    // Создаем семафор
+    static Semaphore sem = new Semaphore(3, 3); // Максимальное количество одновременно работающих потоков - 3
+    public Thread myThread; // делаем поле открытым
+    int count = 3; // Количество попыток чтения
+
+    public Reader(int i)
+    {
+        myThread = new Thread(Read);
+        myThread.Name = $"Читатель {i}";
+        myThread.Start();
+    }
+
+    public void Read()
+    {
+        while (count > 0)
+        {
+            try
+            {
+                sem.WaitOne(Timeout.Infinite); // Ждем бесконечно долгое время, пока освободится слот
+                
+                Console.WriteLine($"{Thread.CurrentThread.Name} входит в библиотеку");
+            
+                Console.WriteLine($"{Thread.CurrentThread.Name} читает");
+                Thread.Sleep(1000); // Имитация чтения
+            
+                Console.WriteLine($"{Thread.CurrentThread.Name} покидает библиотеку");
+            
+                sem.Release(); // Освобождаем место
+            
+                count--; // Уменьшаем счётчик чтений
+            }
+            catch(ThreadInterruptedException ex)
+            {
+                Console.WriteLine($"Исключение прервано: {ex.Message}");
+            }
+        }
+    }
+}
